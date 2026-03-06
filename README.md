@@ -1,24 +1,42 @@
-# JavaCraft - README inicial
+# JavaCraft - Primer hito técnico
 
-En este primer avance construí un prototipo de juego tipo Minecraft usando Java puro, sin librerías externas. Mi objetivo en esta fase fue validar una base jugable sobre la que pueda seguir iterando.
+En esta primera entrega desarrollé un prototipo jugable tipo Minecraft utilizando Java puro, sin librerías externas de render. El objetivo fue validar la arquitectura base del proyecto y dejar una plataforma sólida para iterar.
 
-## Lo que hice
+## Objetivo de esta fase
 
-- Implementé una ventana de juego con bucle principal (`update` + `render`) a 60 FPS.
-- Creé un mundo de bloques (voxels) con generación procedural de terreno.
-- Programé una cámara en primera persona con movimiento y rotación.
-- Añadí interacción con bloques mediante raycast: romper y colocar bloques.
-- Separé el código en clases base para mantener una estructura clara (`Game`, `World`, `Renderer`, `Camera`, `Input`, etc.).
+- Construir un núcleo funcional de juego (loop, render e input).
+- Implementar un mundo de bloques con generación procedural.
+- Habilitar navegación en primera persona e interacción básica con bloques.
+- Definir una estructura de código mantenible para siguientes hitos.
 
-## Controles actuales
+## Alcance implementado
 
-- `W A S D`: moverme
-- `SPACE` / `SHIFT`: subir y bajar
-- Flechas: mirar
+- Bucle de juego desacoplado en `update` y `render`.
+- Renderizado 3D por software de caras visibles de voxels.
+- Mundo generado proceduralmente a partir de ruido interpolado.
+- Cámara en primera persona con movimiento y rotación.
+- Raycast para romper y colocar bloques.
+- HUD con información mínima de estado.
+
+## Arquitectura actual
+
+- `Main`: punto de entrada.
+- `Game`: ciclo principal, orquestación de sistemas e interfaz.
+- `World`: datos de bloques, generación procedural y raycast.
+- `Renderer`: proyección y dibujado de geometría voxel.
+- `Camera`: transformaciones de vista y control de navegación.
+- `Input`: captura de teclado y ratón.
+- `Vec3` y `BlockType`: utilidades base de dominio.
+
+## Controles
+
+- `W A S D`: movimiento horizontal
+- `SPACE` / `SHIFT`: ascenso / descenso
+- Flechas: rotación de cámara
 - Click izquierdo: romper bloque
 - Click derecho: colocar bloque
 
-## Cómo ejecutar
+## Ejecución
 
 ```bash
 ./run.sh
@@ -26,9 +44,17 @@ En este primer avance construí un prototipo de juego tipo Minecraft usando Java
 
 ## Requisitos
 
-- Java instalado (`java` y `javac`)
+- `java` y `javac` disponibles en el sistema
 - Recomendado: Java 21
 
-## Estado del proyecto
+## Limitaciones conocidas de este hito
 
-Este repositorio corresponde al primer hito. Ya tengo una base funcional y el siguiente paso es evolucionarlo con físicas, chunks e inventario.
+- Sin físicas de supervivencia (gravedad, colisiones completas, salto).
+- Sin sistema de chunks ni streaming de mundo.
+- Sin inventario, crafting ni persistencia de guardado.
+
+## Próximos hitos
+
+- Integrar físicas básicas y colisiones robustas.
+- Migrar mundo a chunks para escalar rendimiento.
+- Implementar inventario/hotbar y ciclo de juego base.
