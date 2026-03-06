@@ -1,26 +1,34 @@
-# JavaCraft (primer prototipo)
+# JavaCraft - README inicial
 
-Primer hito de un clon estilo Minecraft en Java puro (sin librerias externas).
+En este primer avance construí un prototipo de juego tipo Minecraft usando Java puro, sin librerías externas. Mi objetivo en esta fase fue validar una base jugable sobre la que pueda seguir iterando.
 
-## Incluye
+## Lo que hice
 
-- Ventana 3D con render de bloques (voxels)
-- Mundo generado proceduralmente
-- Camara en primera persona
-- Colocar y romper bloques con raycast
+- Implementé una ventana de juego con bucle principal (`update` + `render`) a 60 FPS.
+- Creé un mundo de bloques (voxels) con generación procedural de terreno.
+- Programé una cámara en primera persona con movimiento y rotación.
+- Añadí interacción con bloques mediante raycast: romper y colocar bloques.
+- Separé el código en clases base para mantener una estructura clara (`Game`, `World`, `Renderer`, `Camera`, `Input`, etc.).
 
-## Controles
+## Controles actuales
 
-- `W A S D`: movimiento
-- `SPACE` / `SHIFT`: subir / bajar
+- `W A S D`: moverme
+- `SPACE` / `SHIFT`: subir y bajar
 - Flechas: mirar
 - Click izquierdo: romper bloque
 - Click derecho: colocar bloque
 
-## Ejecutar
+## Cómo ejecutar
 
 ```bash
 ./run.sh
 ```
 
-Requiere Java 21 (o compatible con `javac` actual).
+## Requisitos
+
+- Java instalado (`java` y `javac`)
+- Recomendado: Java 21
+
+## Estado del proyecto
+
+Este repositorio corresponde al primer hito. Ya tengo una base funcional y el siguiente paso es evolucionarlo con físicas, chunks e inventario.
