@@ -1,2 +1,4 @@
 out/
 .sources.list
+build/
+.gradle/
