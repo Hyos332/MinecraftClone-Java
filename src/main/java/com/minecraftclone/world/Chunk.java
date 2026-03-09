@@ -25,6 +25,10 @@ public final class Chunk {
         return dirty;
     }
 
+    public void markDirty() {
+        dirty = true;
+    }
+
     public void clearDirty() {
         dirty = false;
     }
