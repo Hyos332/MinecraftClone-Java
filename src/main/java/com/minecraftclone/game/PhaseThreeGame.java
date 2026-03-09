@@ -4,9 +4,12 @@ import com.minecraftclone.block.BlockType;
 import com.minecraftclone.camera.FpsCamera;
 import com.minecraftclone.engine.EngineContext;
 import com.minecraftclone.engine.GameLogic;
+import com.minecraftclone.entity.ItemEntityManager;
 import com.minecraftclone.input.InputManager;
+import com.minecraftclone.inventory.HotbarInventory;
 import com.minecraftclone.player.GameMode;
 import com.minecraftclone.player.PlayerController;
+import com.minecraftclone.render.entity.ItemEntityRenderer;
 import com.minecraftclone.render.voxel.VoxelWorldRenderer;
 import com.minecraftclone.save.PlayerSaveData;
 import com.minecraftclone.save.WorldLoadResult;
@@ -19,6 +22,8 @@ import com.minecraftclone.world.raycast.VoxelRaycaster;
 import java.nio.file.Path;
 import org.joml.Vector3f;
 
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_1;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_9;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
@@ -34,18 +39,6 @@ public final class PhaseThreeGame implements GameLogic {
     private static final float INTERACT_DISTANCE = 6.5f;
     private static final double AUTOSAVE_INTERVAL_SECONDS = 25.0;
 
-    private static final BlockType[] HOTBAR_BLOCKS = {
-            BlockType.DIRT,
-            BlockType.STONE,
-            BlockType.WOOD,
-            BlockType.SAND,
-            BlockType.LEAVES,
-            BlockType.GRASS,
-            BlockType.IRON_ORE,
-            BlockType.COAL_ORE,
-            BlockType.WATER
-    };
-
     private EngineContext context;
     private InputManager input;
 
@@ -53,15 +46,18 @@ public final class PhaseThreeGame implements GameLogic {
 
     private VoxelWorld world;
     private VoxelWorldRenderer worldRenderer;
+    private ItemEntityRenderer itemEntityRenderer;
     private UiRenderer uiRenderer;
     private VoxelRaycaster raycaster;
+
+    private ItemEntityManager itemEntities;
+    private HotbarInventory hotbar;
 
     private FpsCamera camera;
     private PlayerController player;
 
     private Vector3f spawnPosition;
 
-    private int selectedBlockIndex;
     private double elapsedTimeSeconds;
     private double autosaveTimerSeconds;
 
@@ -89,10 +85,8 @@ public final class PhaseThreeGame implements GameLogic {
         if (playerSave != null) {
             this.camera = new FpsCamera(playerSave.x(), playerSave.y(), playerSave.z());
             this.camera.setRotation(playerSave.yaw(), playerSave.pitch());
-            this.selectedBlockIndex = clamp(playerSave.selectedBlockIndex(), 0, HOTBAR_BLOCKS.length - 1);
         } else {
             this.camera = new FpsCamera(spawnPosition.x, spawnPosition.y, spawnPosition.z);
-            this.selectedBlockIndex = 0;
         }
 
         this.player = new PlayerController(camera);
@@ -100,8 +94,22 @@ public final class PhaseThreeGame implements GameLogic {
             this.player.setMode(playerSave.mode());
         }
 
+        this.hotbar = new HotbarInventory();
+        if (playerSave != null) {
+            hotbar.load(playerSave.hotbarBlockIds(), playerSave.hotbarCounts());
+            hotbar.setSelectedIndex(clamp(playerSave.selectedBlockIndex(), 0, HotbarInventory.SLOT_COUNT - 1));
+            if (isHotbarEmpty()) {
+                hotbar.giveStarterKit();
+            }
+        } else {
+            hotbar.giveStarterKit();
+        }
+
+        this.itemEntities = new ItemEntityManager();
+
         this.worldRenderer = new VoxelWorldRenderer();
         this.worldRenderer.init(context.window().width(), context.window().height());
+        this.itemEntityRenderer = new ItemEntityRenderer(context.window().width(), context.window().height());
 
         this.uiRenderer = new UiRenderer();
         this.raycaster = new VoxelRaycaster();
@@ -134,6 +142,7 @@ public final class PhaseThreeGame implements GameLogic {
             saveNow();
         }
 
+        updateHotbarSelectionByKeys();
         updateHotbarSelectionByScroll();
 
         if (input.isCursorCaptured()) {
@@ -151,8 +160,11 @@ public final class PhaseThreeGame implements GameLogic {
 
     @Override
     public void fixedUpdate(double fixedDeltaSeconds) {
-        player.update(input, world, (float) fixedDeltaSeconds);
+        float dt = (float) fixedDeltaSeconds;
+
+        player.update(input, world, dt);
         world.updateStreaming(camera.position(), LOAD_RADIUS_CHUNKS, UNLOAD_RADIUS_CHUNKS);
+        itemEntities.update(world, hotbar, camera.position(), player.mode(), dt);
 
         autosaveTimerSeconds += fixedDeltaSeconds;
         if (autosaveTimerSeconds >= AUTOSAVE_INTERVAL_SECONDS) {
@@ -164,11 +176,15 @@ public final class PhaseThreeGame implements GameLogic {
     @Override
     public void render(float alpha) {
         if (context.window().consumeResizeFlag()) {
-            worldRenderer.resize(context.window().width(), context.window().height());
+            int width = context.window().width();
+            int height = context.window().height();
+            worldRenderer.resize(width, height);
+            itemEntityRenderer.resize(width, height);
         }
 
         worldRenderer.render(world, camera, elapsedTimeSeconds);
-        uiRenderer.render(context.window().width(), context.window().height(), HOTBAR_BLOCKS, selectedBlockIndex, player.mode());
+        itemEntityRenderer.render(itemEntities.entities(), camera);
+        uiRenderer.render(context.window().width(), context.window().height(), hotbar, player.mode());
     }
 
     @Override
@@ -177,6 +193,9 @@ public final class PhaseThreeGame implements GameLogic {
 
         if (uiRenderer != null) {
             uiRenderer.close();
+        }
+        if (itemEntityRenderer != null) {
+            itemEntityRenderer.close();
         }
         if (worldRenderer != null) {
             worldRenderer.close();
@@ -189,15 +208,27 @@ public final class PhaseThreeGame implements GameLogic {
             return;
         }
 
-        byte block = world.getBlock(hit.blockX(), hit.blockY(), hit.blockZ());
-        if (block != BlockType.AIR.id()) {
-            world.setBlock(hit.blockX(), hit.blockY(), hit.blockZ(), BlockType.AIR.id());
+        byte blockId = world.getBlock(hit.blockX(), hit.blockY(), hit.blockZ());
+        BlockType blockType = BlockType.fromId(blockId);
+        if (blockType == BlockType.AIR) {
+            return;
+        }
+
+        world.setBlock(hit.blockX(), hit.blockY(), hit.blockZ(), BlockType.AIR.id());
+
+        if (player.mode() == GameMode.SURVIVAL && blockType != BlockType.WATER) {
+            itemEntities.spawnDrop(blockType, 1, hit.blockX(), hit.blockY(), hit.blockZ());
         }
     }
 
     private void placeSelectedBlock() {
         RaycastHit hit = raycaster.raycast(world, camera.position(), camera.front(), INTERACT_DISTANCE);
         if (hit == null) {
+            return;
+        }
+
+        BlockType selectedBlock = hotbar.selectedBlockType();
+        if (selectedBlock == null) {
             return;
         }
 
@@ -217,7 +248,11 @@ public final class PhaseThreeGame implements GameLogic {
             return;
         }
 
-        world.setBlock(tx, ty, tz, HOTBAR_BLOCKS[selectedBlockIndex].id());
+        if (player.mode() == GameMode.SURVIVAL && !hotbar.consumeSelected(1)) {
+            return;
+        }
+
+        world.setBlock(tx, ty, tz, selectedBlock.id());
     }
 
     private Vector3f calculateSpawnPosition(int worldX, int worldZ) {
@@ -228,6 +263,16 @@ public final class PhaseThreeGame implements GameLogic {
         return new Vector3f(worldX + 0.5f, y + 2.7f, worldZ + 0.5f);
     }
 
+    private void updateHotbarSelectionByKeys() {
+        for (int key = GLFW_KEY_1; key <= GLFW_KEY_9; key++) {
+            if (!input.wasKeyPressed(key)) {
+                continue;
+            }
+            hotbar.setSelectedIndex(key - GLFW_KEY_1);
+            return;
+        }
+    }
+
     private void updateHotbarSelectionByScroll() {
         double scroll = input.scrollDeltaY();
         if (scroll == 0.0) {
@@ -235,30 +280,40 @@ public final class PhaseThreeGame implements GameLogic {
         }
 
         if (scroll > 0.0) {
-            selectedBlockIndex = (selectedBlockIndex + 1) % HOTBAR_BLOCKS.length;
+            hotbar.selectNext();
         } else {
-            selectedBlockIndex--;
-            if (selectedBlockIndex < 0) {
-                selectedBlockIndex = HOTBAR_BLOCKS.length - 1;
-            }
+            hotbar.selectPrevious();
         }
     }
 
     private void saveNow() {
-        if (saveService == null || world == null || camera == null || player == null) {
+        if (saveService == null || world == null || camera == null || player == null || hotbar == null) {
             return;
         }
 
+        Vector3f position = camera.position();
+
         PlayerSaveData playerSave = new PlayerSaveData(
-                camera.position().x,
-                camera.position().y,
-                camera.position().z,
+                position.x,
+                position.y,
+                position.z,
                 camera.yaw(),
                 camera.pitch(),
                 player.mode(),
-                selectedBlockIndex);
+                hotbar.selectedIndex(),
+                hotbar.snapshotBlockIds(),
+                hotbar.snapshotCounts());
 
         saveService.save(world.seed(), playerSave, world.snapshotModifications());
+    }
+
+    private boolean isHotbarEmpty() {
+        for (int i = 0; i < HotbarInventory.SLOT_COUNT; i++) {
+            if (!hotbar.slot(i).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static int clamp(int value, int min, int max) {

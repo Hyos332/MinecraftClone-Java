@@ -1,6 +1,6 @@
-# JavaCraft - Fase 3 (Física + UI + Guardado)
+# JavaCraft - Fase 4 (Inventario + Drops + Pickup)
 
-Esta fase agrega la primera base de gameplay tipo sandbox/survival sobre el motor Java + LWJGL ya existente.
+Esta fase convierte la base sandbox en un loop jugable más cercano a supervivencia: ahora hay inventario real de hotbar, drops de bloques como entidades y recolección al acercarse.
 
 ## Stack
 
@@ -9,34 +9,36 @@ Esta fase agrega la primera base de gameplay tipo sandbox/survival sobre el moto
 - LWJGL 3 (`GLFW`, `OpenGL`, `OpenAL`, `STB`)
 - JOML
 
-## Implementado en Fase 3
+## Implementado en Fase 4
 
-- Física del jugador con `AABB`:
-  - gravedad
-  - salto
-  - colisiones por ejes X/Y/Z contra bloques sólidos
-  - detección de suelo (`onGround`)
-- Modos de juego:
-  - `SURVIVAL` (física/colisiones)
-  - `CREATIVE` (vuelo libre)
-- UI 2D renderizada en OpenGL:
-  - crosshair
-  - hotbar visual de bloques seleccionables
-  - indicador visual de modo de juego
-- Persistencia de partida:
-  - semilla del mundo
-  - estado del jugador (posición, yaw, pitch, modo, slot activo)
-  - bloques modificados por chunk
-  - autosave periódico + guardado al salir + guardado manual
+- Hotbar/inventario funcional (9 slots):
+  - stacks por bloque (`ItemStack`) con límite (`64`)
+  - selección con rueda y teclas `1..9`
+  - consumo de ítems al colocar en `SURVIVAL`
+- Entidades de ítem (`ItemEntity`):
+  - spawn al romper bloques en `SURVIVAL`
+  - física simple (gravedad/rebote/fricción)
+  - tiempo de vida
+  - pickup por proximidad
+- Integración de render para entidades de ítem:
+  - cubos pequeños renderizados encima del mundo
+- UI mejorada de hotbar:
+  - slots con contenido real del inventario
+  - barra visual de cantidad por stack
+- Guardado/carga ampliado:
+  - estado de hotbar (bloque y cantidad por slot) en `player.dat`
+  - compatibilidad con `player.dat` legacy de fase anterior
 
 ## Sistemas activos
 
 - Mundo voxel por chunks (`16x96x16`)
 - Generación procedural reproducible
-- Meshing por chunk (solo caras visibles)
-- Render voxel con shaders
+- Meshing por chunk (caras visibles)
+- Render voxel + entidades + UI
 - Raycasting DDA para romper/colocar
+- Física de jugador con colisiones AABB
 - Carga/descarga dinámica de chunks
+- Autosave periódico + guardado manual
 
 ## Controles
 
@@ -45,13 +47,14 @@ Esta fase agrega la primera base de gameplay tipo sandbox/survival sobre el moto
 - `SPACE`: saltar (`SURVIVAL`) / subir (`CREATIVE`)
 - `LEFT SHIFT`: bajar (`CREATIVE`)
 - `LEFT CTRL`: sprint
-- Scroll: cambiar bloque activo de hotbar
+- Scroll: cambiar slot de hotbar
+- `1..9`: seleccionar slot directo
 - Click izquierdo: romper bloque
 - Click derecho: colocar bloque
 - `G`: alternar `SURVIVAL` / `CREATIVE`
 - `F1`: capturar/liberar cursor
-- `F5`: guardar partida manual
-- `R`: respawn en spawn local
+- `F5`: guardar manual
+- `R`: volver a spawn local
 - `ESC`: salir
 
 ## Ejecutar
@@ -62,23 +65,21 @@ Esta fase agrega la primera base de gameplay tipo sandbox/survival sobre el moto
 
 ## Guardado
 
-La partida se guarda en:
+Directorio de partida:
 
 ```text
 worlds/main/
 ```
 
-Archivos principales:
+Archivos:
 
 - `world.dat`
 - `player.dat`
 - `chunks.dat`
 
-(`worlds/` está ignorado por Git para no ensuciar commits.)
-
 ## Próxima fase recomendada
 
-- Inventario real (`ItemStack`, slots, stack limits)
-- Recolección de drops (`ItemEntity`)
-- Crafteo básico (recetas shaped/shapeless)
-- Iluminación propagada por bloque y luz solar
+- Inventario completo (beyond hotbar) + pantalla de inventario
+- `ItemEntity` optimizada (merge de drops cercanos)
+- Crafteo básico (`shaped` / `shapeless`)
+- Estructura base de `Entity`/`EntityManager` para mobs
