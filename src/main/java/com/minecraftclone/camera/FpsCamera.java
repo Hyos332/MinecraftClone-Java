@@ -91,6 +91,10 @@ public final class FpsCamera {
         return new Vector3f(position);
     }
 
+    public Vector3f front() {
+        return new Vector3f(front);
+    }
+
     public float yaw() {
         return yaw;
     }
