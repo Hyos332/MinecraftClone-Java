@@ -78,7 +78,9 @@ public final class Window implements AutoCloseable {
             }
         });
 
-        centerWindow();
+        if (System.getenv("WAYLAND_DISPLAY") == null) {
+            centerWindow();
+        }
 
         glfwMakeContextCurrent(handle);
         glfwSwapInterval(config.vSync() ? 1 : 0);
