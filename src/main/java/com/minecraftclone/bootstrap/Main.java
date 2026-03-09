@@ -2,7 +2,7 @@ package com.minecraftclone.bootstrap;
 
 import com.minecraftclone.engine.EngineConfig;
 import com.minecraftclone.engine.GameEngine;
-import com.minecraftclone.game.PhaseTwoGame;
+import com.minecraftclone.game.PhaseThreeGame;
 
 public final class Main {
     private Main() {
@@ -17,7 +17,7 @@ public final class Main {
                 true,
                 true);
 
-        GameEngine engine = new GameEngine(config, new PhaseTwoGame());
+        GameEngine engine = new GameEngine(config, new PhaseThreeGame());
         engine.run();
     }
 }
