@@ -1,62 +1,70 @@
-# JavaCraft - Fase 1 (Motor Base en Java + LWJGL)
+# JavaCraft - Fase 2 (Mundo Voxel + Chunks en Java)
 
-En esta fase reestructuré el proyecto como base técnica real para un clon de Minecraft hecho en Java. Dejé atrás el prototipo AWT y migré a una arquitectura de juego con GLFW/OpenGL vía LWJGL.
-
-## Alcance de Fase 1
-
-- Motor base con `game loop` profesional:
-  - `handleFrameInput` por frame
-  - `fixedUpdate` desacoplado (UPS fijo)
-  - `render` separado
-- Ventana y contexto OpenGL con `GLFW`.
-- Input manager unificado (teclado, ratón, scroll, captura de cursor).
-- Cámara FPS con mouse look y movimiento libre.
-- Renderer OpenGL inicial con:
-  - shaders reales (vertex/fragment)
-  - malla de depuración (grid + ejes)
-  - proyección perspectiva + matriz de vista
-- Build reproducible con Gradle Wrapper (`./gradlew`).
+En esta fase implementé el primer vertical slice voxel real sobre la base de Fase 1. El juego ahora renderiza un mundo de bloques por chunks, con generación procedural, raycasting e interacción de construcción/destrucción.
 
 ## Stack técnico
 
 - Java 21
-- Gradle 8.10.2 (wrapper)
-- LWJGL 3 (GLFW, OpenGL, OpenAL, STB)
-- JOML (matemática 3D)
+- Gradle Wrapper 8.10.2
+- LWJGL 3 (`GLFW`, `OpenGL`, `OpenAL`, `STB`)
+- JOML
 
-## Estructura actual
+## Qué implementé en Fase 2
 
-- `com.minecraftclone.bootstrap`: entrada de aplicación
-- `com.minecraftclone.engine`: loop, ventana, configuración y ciclo de vida
-- `com.minecraftclone.input`: manejo de input
-- `com.minecraftclone.camera`: cámara en primera persona
-- `com.minecraftclone.render`: shader, malla y renderer base
-- `com.minecraftclone.game`: escena/juego de fase 1
-- `com.minecraftclone.resource`: carga de recursos
+- Sistema de bloques (`BlockType`) con propiedades de render/sólido/transparencia.
+- Mundo por chunks (`16x96x16`) con carga/descarga dinámica alrededor del jugador.
+- Generación procedural reproducible por semilla:
+  - altura base
+  - variación continental/detalle
+  - cuevas simples
+  - minerales básicos (carbón/hierro)
+  - árboles básicos
+- Meshing por chunk con solo caras visibles.
+- Render voxel OpenGL por chunk con `VAO/VBO` y shader propio.
+- Raycasting DDA para apuntar bloques.
+- Interacción:
+  - click izquierdo: romper bloque
+  - click derecho: colocar bloque en cara adyacente
+  - validación para no colocar dentro del jugador
+- Streaming de chunks en runtime (sin recargar todo el mundo).
 
-## Controles
+## Controles actuales
 
-- `W A S D`: movimiento horizontal
+- `W A S D`: mover
 - `SPACE`: subir
 - `LEFT SHIFT`: bajar
 - `LEFT CTRL`: sprint
-- Ratón: rotar cámara
+- Ratón: mirar
+- Scroll: cambiar bloque a colocar
+- Click izquierdo: romper bloque
+- Click derecho: colocar bloque
 - `F1`: capturar/liberar cursor
-- `R`: reiniciar posición de cámara
+- `R`: reset de posición
 - `ESC`: salir
 
-## Ejecución
+## Ejecutar
 
 ```bash
 ./run.sh
 ```
 
-O directamente:
+`run.sh` usa por defecto `~/.gradle` para que la caché de Gradle no ensucie el repositorio.
 
-```bash
-GRADLE_USER_HOME=.gradle-home ./gradlew run
-```
+## Estructura relevante
 
-## Estado para próxima fase
+- `com.minecraftclone.engine`: loop, ventana y ciclo de vida
+- `com.minecraftclone.camera`: cámara FPS
+- `com.minecraftclone.input`: input manager
+- `com.minecraftclone.block`: catálogo de bloques
+- `com.minecraftclone.world`: mundo/chunks
+- `com.minecraftclone.world.gen`: generación procedural
+- `com.minecraftclone.world.raycast`: raycasting voxel
+- `com.minecraftclone.render.voxel`: meshing + render de chunks
+- `com.minecraftclone.game.PhaseTwoGame`: integración de gameplay fase 2
 
-La base está lista para comenzar Fase 2: mundo voxel/chunks, bloques, meshing y raycasting sobre datos reales de mundo.
+## Próximo objetivo (Fase 3)
+
+- Colisiones/física sólida del jugador (AABB real)
+- Inventario/hotbar funcional con `ItemStack`
+- Persistencia de chunks modificados en disco
+- UI sobre el mundo (crosshair/hotbar/selección)
