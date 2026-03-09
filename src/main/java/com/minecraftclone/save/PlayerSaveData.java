@@ -9,5 +9,7 @@ public record PlayerSaveData(
         float yaw,
         float pitch,
         GameMode mode,
-        int selectedBlockIndex) {
+        int selectedBlockIndex,
+        byte[] hotbarBlockIds,
+        int[] hotbarCounts) {
 }

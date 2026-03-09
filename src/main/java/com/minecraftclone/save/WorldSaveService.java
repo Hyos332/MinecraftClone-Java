@@ -13,7 +13,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class WorldSaveService {
-    private static final int VERSION = 1;
+    private static final int WORLD_VERSION = 1;
+    private static final int CHUNKS_VERSION = 1;
+    private static final int PLAYER_VERSION = 2;
+    private static final int LEGACY_PLAYER_VERSION = 1;
+    private static final int HOTBAR_SLOT_COUNT = 9;
 
     private final Path worldDirectory;
     private final Path worldFile;
@@ -49,7 +53,7 @@ public final class WorldSaveService {
     private long readSeed() {
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(worldFile)))) {
             int version = in.readInt();
-            if (version != VERSION) {
+            if (version != WORLD_VERSION) {
                 throw new IllegalStateException("Version de world.dat no soportada: " + version);
             }
             return in.readLong();
@@ -61,7 +65,7 @@ public final class WorldSaveService {
     private PlayerSaveData readPlayer() {
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(playerFile)))) {
             int version = in.readInt();
-            if (version != VERSION) {
+            if (version != LEGACY_PLAYER_VERSION && version != PLAYER_VERSION) {
                 throw new IllegalStateException("Version de player.dat no soportada: " + version);
             }
 
@@ -74,7 +78,20 @@ public final class WorldSaveService {
             int selectedBlock = in.readInt();
 
             GameMode mode = GameMode.values()[Math.max(0, Math.min(modeOrdinal, GameMode.values().length - 1))];
-            return new PlayerSaveData(x, y, z, yaw, pitch, mode, selectedBlock);
+
+            if (version == LEGACY_PLAYER_VERSION) {
+                return new PlayerSaveData(x, y, z, yaw, pitch, mode, selectedBlock, null, null);
+            }
+
+            int slotCount = in.readInt();
+            byte[] blockIds = new byte[slotCount];
+            int[] counts = new int[slotCount];
+            for (int i = 0; i < slotCount; i++) {
+                blockIds[i] = in.readByte();
+                counts[i] = in.readInt();
+            }
+
+            return new PlayerSaveData(x, y, z, yaw, pitch, mode, selectedBlock, blockIds, counts);
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo leer player.dat", e);
         }
@@ -85,7 +102,7 @@ public final class WorldSaveService {
 
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(modificationsFile)))) {
             int version = in.readInt();
-            if (version != VERSION) {
+            if (version != CHUNKS_VERSION) {
                 throw new IllegalStateException("Version de chunks.dat no soportada: " + version);
             }
 
@@ -111,14 +128,17 @@ public final class WorldSaveService {
 
     private void writeSeed(long seed) {
         writeAtomically(worldFile, out -> {
-            out.writeInt(VERSION);
+            out.writeInt(WORLD_VERSION);
             out.writeLong(seed);
         });
     }
 
     private void writePlayer(PlayerSaveData player) {
+        if (player == null) {
+            return;
+        }
         writeAtomically(playerFile, out -> {
-            out.writeInt(VERSION);
+            out.writeInt(PLAYER_VERSION);
             out.writeFloat(player.x());
             out.writeFloat(player.y());
             out.writeFloat(player.z());
@@ -126,12 +146,20 @@ public final class WorldSaveService {
             out.writeFloat(player.pitch());
             out.writeInt(player.mode().ordinal());
             out.writeInt(player.selectedBlockIndex());
+
+            byte[] ids = normalizeHotbarIds(player.hotbarBlockIds());
+            int[] counts = normalizeHotbarCounts(player.hotbarCounts());
+            out.writeInt(HOTBAR_SLOT_COUNT);
+            for (int i = 0; i < HOTBAR_SLOT_COUNT; i++) {
+                out.writeByte(ids[i]);
+                out.writeInt(counts[i]);
+            }
         });
     }
 
     private void writeModifications(Map<Long, Map<Integer, Byte>> modifications) {
         writeAtomically(modificationsFile, out -> {
-            out.writeInt(VERSION);
+            out.writeInt(CHUNKS_VERSION);
             out.writeInt(modifications.size());
 
             for (Map.Entry<Long, Map<Integer, Byte>> chunkEntry : modifications.entrySet()) {
@@ -178,6 +206,26 @@ public final class WorldSaveService {
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo crear directorio del mundo: " + worldDirectory, e);
         }
+    }
+
+    private static byte[] normalizeHotbarIds(byte[] raw) {
+        byte[] out = new byte[HOTBAR_SLOT_COUNT];
+        if (raw == null) {
+            return out;
+        }
+        System.arraycopy(raw, 0, out, 0, Math.min(raw.length, HOTBAR_SLOT_COUNT));
+        return out;
+    }
+
+    private static int[] normalizeHotbarCounts(int[] raw) {
+        int[] out = new int[HOTBAR_SLOT_COUNT];
+        if (raw == null) {
+            return out;
+        }
+        for (int i = 0; i < Math.min(raw.length, HOTBAR_SLOT_COUNT); i++) {
+            out[i] = Math.max(0, raw[i]);
+        }
+        return out;
     }
 
     @FunctionalInterface

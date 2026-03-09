@@ -1,6 +1,8 @@
 package com.minecraftclone.ui;
 
 import com.minecraftclone.block.BlockType;
+import com.minecraftclone.inventory.HotbarInventory;
+import com.minecraftclone.inventory.ItemStack;
 import com.minecraftclone.player.GameMode;
 import com.minecraftclone.render.ShaderProgram;
 import com.minecraftclone.resource.ResourceManager;
@@ -57,11 +59,11 @@ public final class UiRenderer implements AutoCloseable {
         glBindVertexArray(0);
     }
 
-    public void render(int width, int height, BlockType[] hotbarBlocks, int selectedIndex, GameMode mode) {
+    public void render(int width, int height, HotbarInventory hotbar, GameMode mode) {
         VertexBuilder builder = new VertexBuilder(4096);
 
         addCrosshair(builder, width, height);
-        addHotbar(builder, width, height, hotbarBlocks, selectedIndex);
+        addHotbar(builder, width, height, hotbar, hotbar.selectedIndex());
         addModeIndicator(builder, width, height, mode);
 
         float[] vertices = builder.toArray();
@@ -111,8 +113,8 @@ public final class UiRenderer implements AutoCloseable {
         addRectPx(out, width, height, cx, cy - 7.0f, 1.0f, 14.0f, 1f, 1f, 1f, 0.90f);
     }
 
-    private void addHotbar(VertexBuilder out, int width, int height, BlockType[] blocks, int selectedIndex) {
-        int slots = blocks.length;
+    private void addHotbar(VertexBuilder out, int width, int height, HotbarInventory hotbar, int selectedIndex) {
+        int slots = HotbarInventory.SLOT_COUNT;
         float slotSize = 38.0f;
         float spacing = 6.0f;
         float barWidth = slots * slotSize + (slots - 1) * spacing;
@@ -138,9 +140,24 @@ public final class UiRenderer implements AutoCloseable {
             addRectPx(out, width, height, x, y, slotSize, slotSize,
                     0.12f, 0.12f, 0.14f, 0.88f);
 
-            BlockType block = blocks[i];
+            ItemStack stack = hotbar.slot(i);
+            BlockType block = stack.isEmpty() ? BlockType.AIR : stack.blockType();
+            int count = stack.count();
+
+            if (stack.isEmpty()) {
+                addRectPx(out, width, height, x + 8.0f, y + 8.0f, slotSize - 16.0f, slotSize - 16.0f,
+                        0.25f, 0.25f, 0.28f, 0.45f);
+                continue;
+            }
+
             addRectPx(out, width, height, x + 8.0f, y + 8.0f, slotSize - 16.0f, slotSize - 16.0f,
                     block.r(), block.g(), block.b(), 1.0f);
+
+            float fill = clamp(count / (float) ItemStack.MAX_STACK_SIZE, 0.0f, 1.0f);
+            addRectPx(out, width, height, x + 6.0f, y + slotSize - 6.0f, slotSize - 12.0f, 3.0f,
+                    0.12f, 0.12f, 0.14f, 0.92f);
+            addRectPx(out, width, height, x + 6.0f, y + slotSize - 6.0f, (slotSize - 12.0f) * fill, 3.0f,
+                    0.94f, 0.96f, 0.98f, 0.95f);
         }
     }
 
@@ -182,6 +199,10 @@ public final class UiRenderer implements AutoCloseable {
 
     private static float toNdcY(float pixelY, int height) {
         return 1.0f - (pixelY / height) * 2.0f;
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private static final class VertexBuilder {
