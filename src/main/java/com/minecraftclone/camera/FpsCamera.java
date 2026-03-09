@@ -3,6 +3,7 @@ package com.minecraftclone.camera;
 import com.minecraftclone.input.InputManager;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
@@ -91,8 +92,22 @@ public final class FpsCamera {
         return new Vector3f(position);
     }
 
+    public void setPosition(float x, float y, float z) {
+        position.set(x, y, z);
+    }
+
+    public void setPosition(Vector3fc newPosition) {
+        position.set(newPosition);
+    }
+
     public Vector3f front() {
         return new Vector3f(front);
+    }
+
+    public void setRotation(float yaw, float pitch) {
+        this.yaw = yaw;
+        this.pitch = clamp(pitch, -MAX_PITCH, MAX_PITCH);
+        recalculateBasis();
     }
 
     public float yaw() {
@@ -111,5 +126,9 @@ public final class FpsCamera {
 
         front.cross(worldUp, right).normalize();
         right.cross(front, up).normalize();
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
