@@ -3,6 +3,7 @@ package com.minecraftclone.world;
 import com.minecraftclone.block.BlockType;
 import com.minecraftclone.world.gen.TerrainGenerator;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -14,6 +15,7 @@ public final class VoxelWorld {
     private final long seed;
     private final TerrainGenerator generator;
     private final Map<Long, Chunk> chunks = new HashMap<>();
+    private final Map<Long, Map<Integer, Byte>> chunkModifications = new HashMap<>();
 
     public VoxelWorld(long seed) {
         this.seed = seed;
@@ -34,6 +36,10 @@ public final class VoxelWorld {
 
     public Chunk getChunk(int chunkX, int chunkZ) {
         return chunks.get(ChunkPos.toKey(chunkX, chunkZ));
+    }
+
+    public boolean isSolidBlock(int worldX, int worldY, int worldZ) {
+        return BlockType.fromId(getBlock(worldX, worldY, worldZ)).solid();
     }
 
     public byte getBlock(int worldX, int worldY, int worldZ) {
@@ -64,7 +70,12 @@ public final class VoxelWorld {
 
         int localX = floorMod(worldX, Chunk.SIZE_X);
         int localZ = floorMod(worldZ, Chunk.SIZE_Z);
+        byte previous = chunk.getLocal(localX, worldY, localZ);
+        if (previous == blockId) {
+            return;
+        }
         chunk.setLocal(localX, worldY, localZ, blockId);
+        recordModification(chunkX, chunkZ, localX, worldY, localZ, blockId);
 
         if (localX == 0) {
             markChunkDirty(chunkX - 1, chunkZ);
@@ -96,6 +107,7 @@ public final class VoxelWorld {
                 if (!chunks.containsKey(key)) {
                     Chunk chunk = new Chunk(new ChunkPos(cx, cz));
                     generator.generateChunk(chunk);
+                    applyChunkModifications(chunk);
                     chunks.put(key, chunk);
                 }
             }
@@ -126,8 +138,35 @@ public final class VoxelWorld {
 
         Chunk chunk = new Chunk(new ChunkPos(chunkX, chunkZ));
         generator.generateChunk(chunk);
+        applyChunkModifications(chunk);
         chunks.put(key, chunk);
         return chunk;
+    }
+
+    public Map<Long, Map<Integer, Byte>> snapshotModifications() {
+        Map<Long, Map<Integer, Byte>> copy = new HashMap<>();
+        for (Map.Entry<Long, Map<Integer, Byte>> entry : chunkModifications.entrySet()) {
+            copy.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
+        return copy;
+    }
+
+    public void loadModifications(Map<Long, Map<Integer, Byte>> loaded) {
+        chunkModifications.clear();
+        if (loaded != null) {
+            for (Map.Entry<Long, Map<Integer, Byte>> entry : loaded.entrySet()) {
+                chunkModifications.put(entry.getKey(), new HashMap<>(entry.getValue()));
+            }
+        }
+
+        for (Chunk chunk : chunks.values()) {
+            applyChunkModifications(chunk);
+            chunk.markDirty();
+        }
+    }
+
+    public Map<Long, Map<Integer, Byte>> modificationsView() {
+        return Collections.unmodifiableMap(chunkModifications);
     }
 
     private void markChunkDirty(int chunkX, int chunkZ) {
@@ -135,6 +174,36 @@ public final class VoxelWorld {
         if (chunk != null) {
             chunk.markDirty();
         }
+    }
+
+    private void recordModification(int chunkX, int chunkZ, int localX, int localY, int localZ, byte blockId) {
+        long key = ChunkPos.toKey(chunkX, chunkZ);
+        Map<Integer, Byte> perChunk = chunkModifications.computeIfAbsent(key, ignored -> new HashMap<>());
+        perChunk.put(localIndex(localX, localY, localZ), blockId);
+    }
+
+    private void applyChunkModifications(Chunk chunk) {
+        Map<Integer, Byte> perChunk = chunkModifications.get(chunk.pos().key());
+        if (perChunk == null || perChunk.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<Integer, Byte> entry : perChunk.entrySet()) {
+            int index = entry.getKey();
+            int localX = index % Chunk.SIZE_X;
+            int rem = index / Chunk.SIZE_X;
+            int localZ = rem % Chunk.SIZE_Z;
+            int localY = rem / Chunk.SIZE_Z;
+
+            if (localY < 0 || localY >= Chunk.SIZE_Y) {
+                continue;
+            }
+            chunk.setLocal(localX, localY, localZ, entry.getValue());
+        }
+    }
+
+    private static int localIndex(int x, int y, int z) {
+        return x + Chunk.SIZE_X * (z + Chunk.SIZE_Z * y);
     }
 
     private static int fastFloor(float value) {
