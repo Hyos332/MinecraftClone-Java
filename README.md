@@ -1,40 +1,49 @@
-# JavaCraft - Primer hito técnico
+# JavaCraft - Fase 1 (Motor Base en Java + LWJGL)
 
-En esta primera entrega desarrollé un prototipo jugable tipo Minecraft utilizando Java puro, sin librerías externas de render. El objetivo fue validar la arquitectura base del proyecto y dejar una plataforma sólida para iterar.
+En esta fase reestructuré el proyecto como base técnica real para un clon de Minecraft hecho en Java. Dejé atrás el prototipo AWT y migré a una arquitectura de juego con GLFW/OpenGL vía LWJGL.
 
-## Objetivo de esta fase
+## Alcance de Fase 1
 
-- Construir un núcleo funcional de juego (loop, render e input).
-- Implementar un mundo de bloques con generación procedural.
-- Habilitar navegación en primera persona e interacción básica con bloques.
-- Definir una estructura de código mantenible para siguientes hitos.
+- Motor base con `game loop` profesional:
+  - `handleFrameInput` por frame
+  - `fixedUpdate` desacoplado (UPS fijo)
+  - `render` separado
+- Ventana y contexto OpenGL con `GLFW`.
+- Input manager unificado (teclado, ratón, scroll, captura de cursor).
+- Cámara FPS con mouse look y movimiento libre.
+- Renderer OpenGL inicial con:
+  - shaders reales (vertex/fragment)
+  - malla de depuración (grid + ejes)
+  - proyección perspectiva + matriz de vista
+- Build reproducible con Gradle Wrapper (`./gradlew`).
 
-## Alcance implementado
+## Stack técnico
 
-- Bucle de juego desacoplado en `update` y `render`.
-- Renderizado 3D por software de caras visibles de voxels.
-- Mundo generado proceduralmente a partir de ruido interpolado.
-- Cámara en primera persona con movimiento y rotación.
-- Raycast para romper y colocar bloques.
-- HUD con información mínima de estado.
+- Java 21
+- Gradle 8.10.2 (wrapper)
+- LWJGL 3 (GLFW, OpenGL, OpenAL, STB)
+- JOML (matemática 3D)
 
-## Arquitectura actual
+## Estructura actual
 
-- `Main`: punto de entrada.
-- `Game`: ciclo principal, orquestación de sistemas e interfaz.
-- `World`: datos de bloques, generación procedural y raycast.
-- `Renderer`: proyección y dibujado de geometría voxel.
-- `Camera`: transformaciones de vista y control de navegación.
-- `Input`: captura de teclado y ratón.
-- `Vec3` y `BlockType`: utilidades base de dominio.
+- `com.minecraftclone.bootstrap`: entrada de aplicación
+- `com.minecraftclone.engine`: loop, ventana, configuración y ciclo de vida
+- `com.minecraftclone.input`: manejo de input
+- `com.minecraftclone.camera`: cámara en primera persona
+- `com.minecraftclone.render`: shader, malla y renderer base
+- `com.minecraftclone.game`: escena/juego de fase 1
+- `com.minecraftclone.resource`: carga de recursos
 
 ## Controles
 
 - `W A S D`: movimiento horizontal
-- `SPACE` / `SHIFT`: ascenso / descenso
-- Flechas: rotación de cámara
-- Click izquierdo: romper bloque
-- Click derecho: colocar bloque
+- `SPACE`: subir
+- `LEFT SHIFT`: bajar
+- `LEFT CTRL`: sprint
+- Ratón: rotar cámara
+- `F1`: capturar/liberar cursor
+- `R`: reiniciar posición de cámara
+- `ESC`: salir
 
 ## Ejecución
 
@@ -42,19 +51,12 @@ En esta primera entrega desarrollé un prototipo jugable tipo Minecraft utilizan
 ./run.sh
 ```
 
-## Requisitos
+O directamente:
 
-- `java` y `javac` disponibles en el sistema
-- Recomendado: Java 21
+```bash
+GRADLE_USER_HOME=.gradle-home ./gradlew run
+```
 
-## Limitaciones conocidas de este hito
+## Estado para próxima fase
 
-- Sin físicas de supervivencia (gravedad, colisiones completas, salto).
-- Sin sistema de chunks ni streaming de mundo.
-- Sin inventario, crafting ni persistencia de guardado.
-
-## Próximos hitos
-
-- Integrar físicas básicas y colisiones robustas.
-- Migrar mundo a chunks para escalar rendimiento.
-- Implementar inventario/hotbar y ciclo de juego base.
+La base está lista para comenzar Fase 2: mundo voxel/chunks, bloques, meshing y raycasting sobre datos reales de mundo.

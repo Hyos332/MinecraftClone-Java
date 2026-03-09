@@ -4,9 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
-mkdir -p out
-find src/main/java -name "*.java" > .sources.list
-javac -encoding UTF-8 -d out @.sources.list
-rm -f .sources.list
+export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$ROOT_DIR/.gradle-home}"
 
-java -cp out com.minecraftclone.Main
+./gradlew run "$@"
