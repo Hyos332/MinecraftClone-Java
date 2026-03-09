@@ -1,45 +1,57 @@
-# JavaCraft - Fase 2 (Mundo Voxel + Chunks en Java)
+# JavaCraft - Fase 3 (Física + UI + Guardado)
 
-En esta fase implementé el primer vertical slice voxel real sobre la base de Fase 1. El juego ahora renderiza un mundo de bloques por chunks, con generación procedural, raycasting e interacción de construcción/destrucción.
+Esta fase agrega la primera base de gameplay tipo sandbox/survival sobre el motor Java + LWJGL ya existente.
 
-## Stack técnico
+## Stack
 
 - Java 21
 - Gradle Wrapper 8.10.2
 - LWJGL 3 (`GLFW`, `OpenGL`, `OpenAL`, `STB`)
 - JOML
 
-## Qué implementé en Fase 2
+## Implementado en Fase 3
 
-- Sistema de bloques (`BlockType`) con propiedades de render/sólido/transparencia.
-- Mundo por chunks (`16x96x16`) con carga/descarga dinámica alrededor del jugador.
-- Generación procedural reproducible por semilla:
-  - altura base
-  - variación continental/detalle
-  - cuevas simples
-  - minerales básicos (carbón/hierro)
-  - árboles básicos
-- Meshing por chunk con solo caras visibles.
-- Render voxel OpenGL por chunk con `VAO/VBO` y shader propio.
-- Raycasting DDA para apuntar bloques.
-- Interacción:
-  - click izquierdo: romper bloque
-  - click derecho: colocar bloque en cara adyacente
-  - validación para no colocar dentro del jugador
-- Streaming de chunks en runtime (sin recargar todo el mundo).
+- Física del jugador con `AABB`:
+  - gravedad
+  - salto
+  - colisiones por ejes X/Y/Z contra bloques sólidos
+  - detección de suelo (`onGround`)
+- Modos de juego:
+  - `SURVIVAL` (física/colisiones)
+  - `CREATIVE` (vuelo libre)
+- UI 2D renderizada en OpenGL:
+  - crosshair
+  - hotbar visual de bloques seleccionables
+  - indicador visual de modo de juego
+- Persistencia de partida:
+  - semilla del mundo
+  - estado del jugador (posición, yaw, pitch, modo, slot activo)
+  - bloques modificados por chunk
+  - autosave periódico + guardado al salir + guardado manual
 
-## Controles actuales
+## Sistemas activos
+
+- Mundo voxel por chunks (`16x96x16`)
+- Generación procedural reproducible
+- Meshing por chunk (solo caras visibles)
+- Render voxel con shaders
+- Raycasting DDA para romper/colocar
+- Carga/descarga dinámica de chunks
+
+## Controles
 
 - `W A S D`: mover
-- `SPACE`: subir
-- `LEFT SHIFT`: bajar
-- `LEFT CTRL`: sprint
 - Ratón: mirar
-- Scroll: cambiar bloque a colocar
+- `SPACE`: saltar (`SURVIVAL`) / subir (`CREATIVE`)
+- `LEFT SHIFT`: bajar (`CREATIVE`)
+- `LEFT CTRL`: sprint
+- Scroll: cambiar bloque activo de hotbar
 - Click izquierdo: romper bloque
 - Click derecho: colocar bloque
+- `G`: alternar `SURVIVAL` / `CREATIVE`
 - `F1`: capturar/liberar cursor
-- `R`: reset de posición
+- `F5`: guardar partida manual
+- `R`: respawn en spawn local
 - `ESC`: salir
 
 ## Ejecutar
@@ -48,23 +60,25 @@ En esta fase implementé el primer vertical slice voxel real sobre la base de Fa
 ./run.sh
 ```
 
-`run.sh` usa por defecto `~/.gradle` para que la caché de Gradle no ensucie el repositorio.
+## Guardado
 
-## Estructura relevante
+La partida se guarda en:
 
-- `com.minecraftclone.engine`: loop, ventana y ciclo de vida
-- `com.minecraftclone.camera`: cámara FPS
-- `com.minecraftclone.input`: input manager
-- `com.minecraftclone.block`: catálogo de bloques
-- `com.minecraftclone.world`: mundo/chunks
-- `com.minecraftclone.world.gen`: generación procedural
-- `com.minecraftclone.world.raycast`: raycasting voxel
-- `com.minecraftclone.render.voxel`: meshing + render de chunks
-- `com.minecraftclone.game.PhaseTwoGame`: integración de gameplay fase 2
+```text
+worlds/main/
+```
 
-## Próximo objetivo (Fase 3)
+Archivos principales:
 
-- Colisiones/física sólida del jugador (AABB real)
-- Inventario/hotbar funcional con `ItemStack`
-- Persistencia de chunks modificados en disco
-- UI sobre el mundo (crosshair/hotbar/selección)
+- `world.dat`
+- `player.dat`
+- `chunks.dat`
+
+(`worlds/` está ignorado por Git para no ensuciar commits.)
+
+## Próxima fase recomendada
+
+- Inventario real (`ItemStack`, slots, stack limits)
+- Recolección de drops (`ItemEntity`)
+- Crafteo básico (recetas shaped/shapeless)
+- Iluminación propagada por bloque y luz solar
