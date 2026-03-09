@@ -32,6 +32,7 @@ public final class PhaseThreeGame implements GameLogic {
     private static final int LOAD_RADIUS_CHUNKS = 8;
     private static final int UNLOAD_RADIUS_CHUNKS = 12;
     private static final float INTERACT_DISTANCE = 6.5f;
+    private static final double AUTOSAVE_INTERVAL_SECONDS = 25.0;
 
     private static final BlockType[] HOTBAR_BLOCKS = {
             BlockType.DIRT,
@@ -62,6 +63,7 @@ public final class PhaseThreeGame implements GameLogic {
 
     private int selectedBlockIndex;
     private double elapsedTimeSeconds;
+    private double autosaveTimerSeconds;
 
     @Override
     public void init(EngineContext context) {
@@ -151,6 +153,12 @@ public final class PhaseThreeGame implements GameLogic {
     public void fixedUpdate(double fixedDeltaSeconds) {
         player.update(input, world, (float) fixedDeltaSeconds);
         world.updateStreaming(camera.position(), LOAD_RADIUS_CHUNKS, UNLOAD_RADIUS_CHUNKS);
+
+        autosaveTimerSeconds += fixedDeltaSeconds;
+        if (autosaveTimerSeconds >= AUTOSAVE_INTERVAL_SECONDS) {
+            autosaveTimerSeconds = 0.0;
+            saveNow();
+        }
     }
 
     @Override
