@@ -109,6 +109,10 @@ public final class VoxelWorld {
                     generator.generateChunk(chunk);
                     applyChunkModifications(chunk);
                     chunks.put(key, chunk);
+                    markChunkDirty(cx - 1, cz);
+                    markChunkDirty(cx + 1, cz);
+                    markChunkDirty(cx, cz - 1);
+                    markChunkDirty(cx, cz + 1);
                 }
             }
         }
@@ -124,7 +128,13 @@ public final class VoxelWorld {
             int distSq = dx * dx + dz * dz;
 
             if (distSq > unloadRadiusSq && !keep.contains(entry.getKey())) {
+                int cx = chunk.pos().x();
+                int cz = chunk.pos().z();
                 iterator.remove();
+                markChunkDirty(cx - 1, cz);
+                markChunkDirty(cx + 1, cz);
+                markChunkDirty(cx, cz - 1);
+                markChunkDirty(cx, cz + 1);
             }
         }
     }

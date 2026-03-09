@@ -20,7 +20,8 @@ public final class ChunkMesher {
             {{0, 1, 0}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1}}
     };
 
-    private static final int[] TRIANGLE_INDICES = {0, 1, 2, 0, 2, 3};
+    // Flip winding so outward faces are front faces when GL culling is enabled.
+    private static final int[] TRIANGLE_INDICES = {0, 2, 1, 0, 3, 2};
 
     public ChunkMeshData build(Chunk chunk, VoxelWorld world) {
         VertexBufferBuilder builder = new VertexBufferBuilder(32_768);
